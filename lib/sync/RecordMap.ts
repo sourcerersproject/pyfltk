@@ -3,6 +3,7 @@ import { SxObject } from "../util";
 export interface RecordMap<R> {
 
     model: any;
+    skipOps?: string[];
     columnMap: SxObject<string>;
     dataQuery?: (() => any) | any;
     nameCasing?: "CAMEL_CASE" | "SNAKE_CASE";

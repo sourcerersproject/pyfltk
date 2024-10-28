@@ -83,7 +83,7 @@ export class GcpMiddleStore implements MiddleStore {
         for (const publicUrl of publicUrls) {
             this.eventListener && this.eventListener(GcpEvent.PREPARING_TO_GET_DATA_FROM_URL, `[synchronoux] - GcpMiddleStore.loadFoundData: Preparing to load '${publicUrl}' from locations`, params);
             try {
-                cb(await RequestHelper.stringFromUrl(publicUrl.replace("%2F", "/"), { responseType: "text", timeout: 21474836 }), params);
+                await cb(await RequestHelper.stringFromUrl(publicUrl.replace("%2F", "/"), { responseType: "text", timeout: 21474836 }), params);
             } catch (err: any) {
                 if ((this.eventListener && (await this.eventListener(GcpEvent.GET_DATA_FROM_URL_FAILED, `[synchronoux] - GcpMiddleStore.loadFoundData: Failed to load '${publicUrl}' from locations ... failed`, params)))) {
                     throw err;

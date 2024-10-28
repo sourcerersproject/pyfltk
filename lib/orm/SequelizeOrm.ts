@@ -8,6 +8,8 @@ export enum OrmEvent {
 
     CREATE_NEW_RECORD,
     SKIP_WRITING_RECORD,
+    OP_SKIP_READING_RECORD,
+    OP_SKIP_WRITING_RECORD,
     UPDATE_EXISTING_RECORD,
     PREPARING_TO_WRITE_RECORD,
     WHERE_FUNCTION_RETURN_FALSE,
@@ -20,7 +22,7 @@ export interface SequelizeOrmOption {
     writeMode?: OrmWriteMode;
     reverseColumnMapOnRead?: boolean;
     whereFunction?: (record: SyncRecord) => SxObject<any> | boolean;
-    eventListener?: (event: OrmEvent, message: string | Error, record: SyncRecord) => Promise<boolean>;
+    eventListener?: (event: OrmEvent, message: string | Error, record?: SyncRecord, recordMap?: RecordMap<any>) => Promise<boolean>;
 
 }
 
@@ -31,7 +33,7 @@ export class SequelizeOrm implements Orm {
     protected static instance: SequelizeOrm;
     protected reverseColumnMapOnRead: boolean;
     protected whereFunction?: (record: SyncRecord) => SxObject<any> | boolean;
-    protected eventListener?: (event: OrmEvent, message: string | Error, record: SyncRecord) => Promise<boolean>;
+    protected eventListener?: (event: OrmEvent, message: string | Error, record?: SyncRecord, recordMap?: RecordMap<any>) => Promise<boolean>;
 
     constructor(options?: SequelizeOrmOption) {
         this.whereFunction = options?.whereFunction;
@@ -53,6 +55,10 @@ export class SequelizeOrm implements Orm {
     }
 
     async readRecord<R>(recordMap: RecordMap<any>, cb: (table: string, r: R) => void, params?: SxObject<any>, table?: string): Promise<void> {
+        if (recordMap.skipOps?.includes("ORM_READ")) {
+            this.broadCaseEvent(OrmEvent.OP_SKIP_READING_RECORD, "skipping the reading record", undefined, recordMap);
+            return;
+        }
         const filter = (recordMap.dataQuery 
             ? (typeof recordMap.dataQuery === "function" ? recordMap.dataQuery() : recordMap.dataQuery)
             : {});
@@ -97,6 +103,10 @@ export class SequelizeOrm implements Orm {
     // TODO try catch to report error if resilient
     async writeRecord(recordMap: RecordMap<any>, record: SyncRecord): Promise<number> {
         let existingRecord: any;
+        if (recordMap.skipOps?.includes("ORM_WRITE")) {
+            this.broadCaseEvent(OrmEvent.OP_SKIP_WRITING_RECORD, "skipping writing the record record", record, recordMap);
+            return 0;
+        }
         if (!await this.broadCaseEvent(OrmEvent.PREPARING_TO_WRITE_RECORD, "preparing to write record", record)) {
             this.broadCaseEvent(OrmEvent.SKIP_WRITING_RECORD, "skipping the writing the record", record);
             return 0;
@@ -140,9 +150,9 @@ export class SequelizeOrm implements Orm {
         return writtenRecords;
     }
 
-    async broadCaseEvent(event: OrmEvent, message: string | Error, record: SyncRecord) {
+    async broadCaseEvent(event: OrmEvent, message: string | Error, record?: SyncRecord, recordMap?: RecordMap<any>) {
         if (!this.eventListener) return true;
-        return await this.eventListener(event, message, record)
+        return await this.eventListener(event, message, record, recordMap)
     }
 
 }

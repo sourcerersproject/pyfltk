@@ -1,6 +1,6 @@
 {
   "name": "synchronoux",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "The Synchronoux framework for Node (Typescript, Javascript)",
   "main": "index.js",
   "module": "index.js",
